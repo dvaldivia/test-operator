@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "aws"
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "minio-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.aws.replicaCount }}
+  selector:
+    matchLabels:
+      minio: aws
+  template:
+    metadata:
+      labels:
+        minio: aws
+    spec:
+      {{- with .Values.aws.imagePullSecrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: console-sa
+      {{- with .Values.aws.securityContext }}
+      securityContext:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aws.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aws.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aws.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.aws.topologySpreadConstraints }}
+      topologySpreadConstraints:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.aws.image.repository }}:{{ .Values.aws.image.tag }}"
+          imagePullPolicy: {{ .Values.aws.image.pullPolicy }}
+          ports:
+            - containerPort: 9090
+              name: http
+            - containerPort: 9443
+              name: https
+          args:
+            - server
+          env:
+            - name: CONSOLE_OPERATOR_MODE
+              value: "on"
+                {{- with .Values.aws.env }}
+                {{ toYaml . | nindent 10 }}
+                {{- end }}
+            - name: AWS_REGION
+              value: {{ .Values.aws.region }}
+
+          resources:
+      {{- toYaml .Values.aws.resources | nindent 12 }}
+      {{- with .Values.aws.initContainers }}
+      initContainers:
+      {{- toYaml . | nindent 8 }}
+  {{- end}}
